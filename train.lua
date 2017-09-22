@@ -38,7 +38,7 @@ opt = {
    save_latest_freq = 5000,     -- save the latest model every latest_freq sgd iterations (overwrites the previous latest model)
    print_freq = 50,             -- print the debug information every print_freq iterations
    display_freq = 100,          -- display the current results every display_freq iterations
-   save_display_freq = 5000,    -- save the current display of results every save_display_freq_iterations
+   save_display_freq = 100,    -- save the current display of results every save_display_freq_iterations
    continue_train=0,            -- if continue training, load the latest model: 1: true, 0: false
    serial_batches = 0,          -- if 1, takes images in order to make batches, otherwise takes them randomly
    serial_batch_iter = 1,       -- iter into serial image list
@@ -391,13 +391,18 @@ for epoch = 1, opt.niter do
                     end
                 elseif opt.preprocess == 'gray' then
                     for i2=1, fake_B:size(1) do
-                        if image_out==nil then image_out = torch.cat(real_A[i2]:float(), fake_B[i2]:float(), 1)
-                        else image_out = torch.cat(image_out, torch.cat(util.deprocess(real_A[i2]:float()),util.deprocess(fake_B[i2]:float()),3), 2) end
+                        if image_out==nil then image_out = torch.cat(real_A[i2]:float(), fake_B[i2]:float(), 3)
+                        
+                        else 
+                            image_out = torch.cat(image_out, torch.cat(real_A[i2]:float(), fake_B[i2]:float(), 3), 2) 
+                        end
                     end
                 else 
                     for i2=1, fake_B:size(1) do
                         if image_out==nil then image_out = torch.cat(util.deprocess(real_A[i2]:float()),util.deprocess(fake_B[i2]:float()),3)
-                        else image_out = torch.cat(image_out, torch.cat(util.deprocess(real_A[i2]:float()),util.deprocess(fake_B[i2]:float()),3), 2) end
+                        else
+                            image_out = torch.cat(image_out, torch.cat(util.deprocess(real_A[i2]:float()),util.deprocess(fake_B[i2]:float()),3), 2) 
+                        end
                     end 
                 end
             end

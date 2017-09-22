@@ -21,11 +21,11 @@ opt = {
     how_many = 'all',         -- how many test images to run (set to all to run on every image found in the data/phase folder)
     which_direction = 'AtoB', -- AtoB or BtoA
     phase = 'val',            -- train, val, test ,etc
-    preprocess = 'regular',   -- for special purpose preprocessing, e.g., for colorization, change this (selects preprocessing functions in util.lua)
+    preprocess = 'gray',   -- for special purpose preprocessing, e.g., for colorization, change this (selects preprocessing functions in util.lua)
     aspect_ratio = 1.0,       -- aspect ratio of result images
     name = '',                -- name of experiment, selects which model to run, should generally should be passed on command line
-    input_nc = 3,             -- #  of input image channels
-    output_nc = 3,            -- #  of output image channels
+    input_nc = 1,             -- #  of input image channels
+    output_nc = 1,            -- #  of output image channels
     serial_batches = 1,       -- if 1, takes images in order to make batches, otherwise takes them randomly
     serial_batch_iter = 1,    -- iter into serial image list
     cudnn = 1,                -- set to 0 to not use cudnn (untested)
@@ -69,8 +69,8 @@ else
 end
 ----------------------------------------------------------------------------
 
-local input = torch.FloatTensor(opt.batchSize,3,opt.fineSize,opt.fineSize)
-local target = torch.FloatTensor(opt.batchSize,3,opt.fineSize,opt.fineSize)
+local input = torch.FloatTensor(opt.batchSize, 1, opt.fineSize, opt.fineSize)
+local target = torch.FloatTensor(opt.batchSize, 1, opt.fineSize, opt.fineSize)
 
 print('checkpoints_dir', opt.checkpoints_dir)
 local netG = util.load(paths.concat(opt.checkpoints_dir, opt.netG_name .. '.t7'), opt)
@@ -113,11 +113,16 @@ for n=1,math.floor(opt.how_many/opt.batchSize) do
        local target_AB = target:float()
        target = util.deprocessLAB_batch(input_L, target_AB)
        input = util.deprocessL_batch(input_L)
+    elseif opt.preprocess == 'gray' then
+       output = netG:forward(input)
+       input = input:float()
+       output = output:float()
+       target = target:float()
     else 
-        output = util.deprocess_batch(netG:forward(input))
-        input = util.deprocess_batch(input):float()
-        output = output:float()
-        target = util.deprocess_batch(target):float()
+       output = util.deprocess_batch(netG:forward(input))
+       input = util.deprocess_batch(input):float()
+       output = output:float()
+       target = util.deprocess_batch(target):float()
     end
     paths.mkdir(paths.concat(opt.results_dir, opt.netG_name .. '_' .. opt.phase))
     local image_dir = paths.concat(opt.results_dir, opt.netG_name .. '_' .. opt.phase, 'images')
@@ -136,7 +141,7 @@ for n=1,math.floor(opt.how_many/opt.batchSize) do
     print('Saved images to: ', image_dir)
     
     if opt.display then
-      if opt.preprocess == 'regular' then
+      if opt.preprocess == 'regular' or opt.preprocess == 'gray' then
         disp = require 'display'
         disp.image(util.scaleBatch(input,100,100),{win=opt.display_id, title='input'})
         disp.image(util.scaleBatch(output,100,100),{win=opt.display_id+1, title='output'})
