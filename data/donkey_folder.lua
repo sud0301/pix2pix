@@ -129,6 +129,21 @@ local function loadImage(path)
    return imA, imB
 end
 
+
+local function loadImageGray(path)
+   local input = image.load(path, 1, 'float')
+   --print (image.getSize(input))
+   --print (input:size(3))
+   input = input:reshape(1, input:size(1), input:size(2))
+   local h = input:size(2)
+   local w = input:size(3)
+
+   local imA = image.crop(input, 0, 0, w/2, h)
+   local imB = image.crop(input, w/2, 0, w, h)
+   
+   return imA, imB
+end
+
 local function loadImageInpaint(path)
   local imB = image.load(path, 3, 'float')
   imB = image.scale(imB, loadSize[2], loadSize[2])
@@ -175,6 +190,11 @@ local trainHook = function(self, path)
      imA, imB = preprocessAandB(imA, imB)
      imAB = torch.cat(imA, imB, 1)
    end
+    
+   if opt.preprocess == 'gray' then
+     local imA, imB = loadImageGray(path)
+     imAB = torch.cat(imA, imB, 1)
+   end  
    
    if opt.preprocess == 'colorization' then 
 --     print('process colorization')

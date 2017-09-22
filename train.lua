@@ -18,8 +18,8 @@ opt = {
    fineSize = 256,         --  then crop to this size
    ngf = 64,               -- #  of gen filters in first conv layer
    ndf = 64,               -- #  of discrim filters in first conv layer
-   input_nc = 3,           -- #  of input image channels
-   output_nc = 3,          -- #  of output image channels
+   input_nc = 1,           -- #  of input image channels
+   output_nc = 1,          -- #  of output image channels
    niter = 200,            -- #  of iter at starting learning rate
    lr = 0.0002,            -- initial learning rate for adam
    beta1 = 0.5,            -- momentum term of adam
@@ -32,7 +32,7 @@ opt = {
    name = '',              -- name of the experiment, should generally be passed on the command line
    which_direction = 'AtoB',    -- AtoB or BtoA
    phase = 'train',             -- train, val, test, etc
-   preprocess = 'regular',      -- for special purpose preprocessing, e.g., for colorization, change this (selects preprocessing functions in util.lua)
+   preprocess = 'gray',      -- for special purpose preprocessing, e.g., for colorization, change this (selects preprocessing functions in util.lua)
    nThreads = 2,                -- # threads for loading data
    save_epoch_freq = 50,        -- save a model every save_epoch_freq epochs (does not overwrite previously saved models)
    save_latest_freq = 5000,     -- save the latest model every latest_freq sgd iterations (overwrites the previous latest model)
@@ -207,7 +207,7 @@ function createRealFake()
     data_tm:reset(); data_tm:resume()
     local real_data, data_path = data:getBatch()
     data_tm:stop()
-    
+   
     real_A:copy(real_data[{ {}, idx_A, {}, {} }])
     real_B:copy(real_data[{ {}, idx_B, {}, {} }])
     
@@ -358,10 +358,15 @@ for epoch = 1, opt.niter do
                 disp.image(util.deprocessL_batch(real_A_s), {win=opt.display_id, title=opt.name .. ' input'})
                 disp.image(util.deprocessLAB_batch(real_A_s, fake_B_s), {win=opt.display_id+1, title=opt.name .. ' output'})
                 disp.image(util.deprocessLAB_batch(real_A_s, real_B_s), {win=opt.display_id+2, title=opt.name .. ' target'})
+            elseif opt.preprocess == 'gray' then 
+                disp.image(util.scaleBatch(real_A:float(),100,100), {win=opt.display_id, title=opt.name .. ' input'})
+                disp.image(util.scaleBatch(fake_B:float(),100,100), {win=opt.display_id+1, title=opt.name .. ' output'})
+                disp.image(util.scaleBatch(real_B:float(),100,100), {win=opt.display_id+2, title=opt.name .. ' target'})
             else
                 disp.image(util.deprocess_batch(util.scaleBatch(real_A:float(),100,100)), {win=opt.display_id, title=opt.name .. ' input'})
                 disp.image(util.deprocess_batch(util.scaleBatch(fake_B:float(),100,100)), {win=opt.display_id+1, title=opt.name .. ' output'})
                 disp.image(util.deprocess_batch(util.scaleBatch(real_B:float(),100,100)), {win=opt.display_id+2, title=opt.name .. ' target'})
+            
             end
         end
       
@@ -384,11 +389,16 @@ for epoch = 1, opt.niter do
                         if image_out==nil then image_out = torch.cat(util.deprocessL(real_A[i2]:float()),util.deprocessLAB(real_A[i2]:float(), fake_B[i2]:float()),3)/255.0
                         else image_out = torch.cat(image_out, torch.cat(util.deprocessL(real_A[i2]:float()),util.deprocessLAB(real_A[i2]:float(), fake_B[i2]:float()),3)/255.0, 2) end
                     end
-                else
+                elseif opt.preprocess == 'gray' then
+                    for i2=1, fake_B:size(1) do
+                        if image_out==nil then image_out = torch.cat(real_A[i2]:float(), fake_B[i2]:float(), 1)
+                        else image_out = torch.cat(image_out, torch.cat(util.deprocess(real_A[i2]:float()),util.deprocess(fake_B[i2]:float()),3), 2) end
+                    end
+                else 
                     for i2=1, fake_B:size(1) do
                         if image_out==nil then image_out = torch.cat(util.deprocess(real_A[i2]:float()),util.deprocess(fake_B[i2]:float()),3)
                         else image_out = torch.cat(image_out, torch.cat(util.deprocess(real_A[i2]:float()),util.deprocess(fake_B[i2]:float()),3), 2) end
-                    end
+                    end 
                 end
             end
             image.save(paths.concat(opt.checkpoints_dir,  opt.name , counter .. '_train_res.png'), image_out)
