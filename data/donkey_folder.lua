@@ -77,6 +77,34 @@ local preprocessAandB = function(imA, imB)
 end
 
 
+local preprocessAandBgray = function(imA, imB)
+  imA = image.scale(imA, loadSize[2], loadSize[2])
+  imB = image.scale(imB, loadSize[2], loadSize[2])
+  
+  local oW = sampleSize[2]
+  local oH = sampleSize[2]
+  local iH = imA:size(2)
+  local iW = imA:size(3)
+  
+  if iH~=oH then     
+    h1 = math.ceil(torch.uniform(1e-2, iH-oH))
+  end
+  
+  if iW~=oW then
+    w1 = math.ceil(torch.uniform(1e-2, iW-oW))
+  end
+  if iH ~= oH or iW ~= oW then 
+    imA = image.crop(imA, w1, h1, w1 + oW, h1 + oH)
+    imB = image.crop(imB, w1, h1, w1 + oW, h1 + oH)
+  end
+  
+  if opt.flip == 1 and torch.uniform() > 0.5 then 
+    imA = image.hflip(imA)
+    imB = image.hflip(imB)
+  end
+  
+  return imA, imB
+end
 
 local function loadImageChannel(path)
     local input = image.load(path, 3, 'float')
@@ -193,6 +221,7 @@ local trainHook = function(self, path)
     
    if opt.preprocess == 'gray' then
      local imA, imB = loadImageGray(path)
+     imA, imB = preprocessAandBgray(imA, imB)
      imAB = torch.cat(imA, imB, 1)
    end  
    
